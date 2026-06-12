@@ -544,11 +544,15 @@
       const dados = await resp.json();
       if (dados.erro) throw new Error(dados.erro);
       renderizarResultado(dados, mat);
+      // Rola suavemente até o resultado
+      document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (err) {
       resultado.innerHTML = `<div class="erro">⚠️ Não foi possível carregar os dados. Tente novamente em instantes.<br><small>${esc(err.message)}</small></div>`;
     } finally {
       spinner.classList.remove('ativo');
       btn.disabled = false;
+      // Limpa matrícula e captcha após consulta
+      document.getElementById('matriculaInput').value = '';
       gerarCaptcha();
     }
   }
