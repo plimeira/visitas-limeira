@@ -319,6 +319,43 @@
       line-height: 1.5;
     }
 
+    /* ── CAPTCHA ── */
+    .captcha-box {
+      background: #fff;
+      border: 2px solid var(--borda);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .captcha-pergunta {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--texto);
+      white-space: nowrap;
+      flex: 1;
+    }
+    .captcha-input {
+      width: 70px !important;
+      padding: 10px 12px !important;
+      font-size: 16px !important;
+      font-weight: 700 !important;
+      letter-spacing: .05em !important;
+      text-align: center;
+      border: 2px solid var(--borda) !important;
+      border-radius: var(--radius) !important;
+    }
+    .captcha-input:focus { border-color: #8B0000 !important; }
+    .captcha-erro {
+      width: 100%;
+      font-size: 12px;
+      color: var(--vermelho);
+      margin-top: 2px;
+      display: none;
+    }
+
     /* ── ERRO ── */
     .erro {
       background: #FFF8E6;
@@ -371,6 +408,12 @@
       autocorrect="off"
       spellcheck="false"
     />
+    <div class="captcha-box" id="captchaBox">
+      <span class="captcha-pergunta" id="captchaPergunta"></span>
+      <input type="text" id="captchaInput" class="captcha-input" inputmode="numeric"
+             pattern="[0-9]*" maxlength="3" placeholder="?" autocomplete="off" />
+      <span class="captcha-erro" id="captchaErro">Resposta incorreta</span>
+    </div>
     <button id="btnConsultar" onclick="consultar()">Consultar</button>
   </div>
 
@@ -392,6 +435,21 @@
   // ══════════════════════════════════════════════════════
   //  CONFIGURAÇÃO — substitua pelo ID real da planilha
   // ══════════════════════════════════════════════════════
+  // ── CAPTCHA ──────────────────────────────────────────────
+  let captchaResposta = 0;
+
+  function gerarCaptcha() {
+    const a = Math.floor(Math.random() * 9) + 1;
+    const b = Math.floor(Math.random() * 9) + 1;
+    captchaResposta = a + b;
+    document.getElementById('captchaPergunta').textContent = `Quanto é ${a} + ${b}?`;
+    document.getElementById('captchaInput').value = '';
+    document.getElementById('captchaErro').style.display = 'none';
+  }
+
+  // Gera captcha ao carregar a página
+  window.addEventListener('load', gerarCaptcha);
+
   const WORKER_URL = "https://visitas-limeira.trab-edu-cdplimeira.workers.dev";
 
   // ══════════════════════════════════════════════════════
@@ -461,6 +519,16 @@
     const btn      = document.getElementById('btnConsultar');
     const mat      = input.value.trim().replace(/\D/g, '');
 
+    // Valida captcha
+    const captchaValor = parseInt(document.getElementById('captchaInput').value.trim());
+    if (isNaN(captchaValor) || captchaValor !== captchaResposta) {
+      document.getElementById('captchaErro').style.display = 'block';
+      document.getElementById('captchaInput').focus();
+      gerarCaptcha();
+      return;
+    }
+    document.getElementById('captchaErro').style.display = 'none';
+
     if (mat.length < 5 || mat.length > 7) {
       resultado.innerHTML = `<div class="erro">⚠️ Digite uma matrícula com 5 a 7 dígitos (sem o dígito verificador).</div>`;
       return;
@@ -481,6 +549,7 @@
     } finally {
       spinner.classList.remove('ativo');
       btn.disabled = false;
+      gerarCaptcha();
     }
   }
 
