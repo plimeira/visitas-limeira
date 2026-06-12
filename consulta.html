@@ -392,83 +392,15 @@
   // ══════════════════════════════════════════════════════
   //  CONFIGURAÇÃO — substitua pelo ID real da planilha
   // ══════════════════════════════════════════════════════
-  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSnkpirvwVhZGuwuperMEYP3yRsSdFr-UnU_PMwozkgo8-P5WCjpN3t6MhcqSQ88E1B-i919x2vFwmK/pub?gid=1863606542&single=true&output=csv";
-  
-  
-
-  // ══════════════════════════════════════════════════════
-  //  Cache em memória (válido enquanto a página estiver aberta)
-  // ══════════════════════════════════════════════════════
-  let dadosCache = null;
-
-  // ══════════════════════════════════════════════════════
-  //  Parse CSV respeitando campos entre aspas
-  // ══════════════════════════════════════════════════════
-  function parseCSV(texto) {
-    const linhas = texto.trim().split('\n');
-    const cabecalho = parseLinhaCSV(linhas[0]);
-    return linhas.slice(1).map(linha => {
-      const vals = parseLinhaCSV(linha);
-      const obj = {};
-      cabecalho.forEach((col, i) => {
-        obj[col.trim().replace(/^"|"$/g, '')] = (vals[i] || '').trim().replace(/^"|"$/g, '');
-      });
-      return obj;
-    }).filter(r => r.MATRICULA);
-  }
-
-  function parseLinhaCSV(linha) {
-    const resultado = [];
-    let atual = '';
-    let dentroDe = false;
-    for (let i = 0; i < linha.length; i++) {
-      const c = linha[i];
-      if (c === '"') {
-        if (dentroDe && linha[i+1] === '"') { atual += '"'; i++; }
-        else { dentroDe = !dentroDe; }
-      } else if (c === ',' && !dentroDe) {
-        resultado.push(atual); atual = '';
-      } else {
-        atual += c;
-      }
-    }
-    resultado.push(atual);
-    return resultado;
-  }
-
-  // ══════════════════════════════════════════════════════
-  //  Carrega CSV (com cache)
-  // ══════════════════════════════════════════════════════
-  async function carregarDados() {
-    if (dadosCache) return dadosCache;
-    const resp = await fetch(CSV_URL + '&rand=' + Date.now());
-    if (!resp.ok) throw new Error('Erro ao acessar a planilha (HTTP ' + resp.status + ')');
-    const texto = await resp.text();
-    dadosCache = parseCSV(texto);
-    return dadosCache;
-  }
-
-  // ══════════════════════════════════════════════════════
-  //  Busca por matrícula — ignora o dígito verificador (último dígito)
-  //  Planilha armazena MATRICULA com dígito; usuário digita sem.
-  //  Ex.: planilha = "1198058X" → busca = "119805" → match
-  // ══════════════════════════════════════════════════════
-  function buscarPorMatricula(dados, matriculaUsuario) {
-    const mat = matriculaUsuario.trim().replace(/\D/g, '');
-    return dados.filter(row => {
-      const matPlanilha = row.MATRICULA.trim().replace(/\D/g, '');
-      // Remove o último dígito (verificador) para comparar
-      return matPlanilha.slice(0, -1) === mat;
-    });
-  }
+  const WORKER_URL = "https://visitas-limeira.trab-edu-cdplimeira.workers.dev";
 
   // ══════════════════════════════════════════════════════
   //  Renderização dos resultados
   // ══════════════════════════════════════════════════════
-  function renderizarResultado(linhas, matriculaDigitada) {
+  function renderizarResultado(dados, matriculaDigitada) {
     const div = document.getElementById('resultado');
 
-    if (!linhas || linhas.length === 0) {
+    if (!dados.encontrado) {
       div.innerHTML = `
         <div class="nao-encontrado">
           <div class="nao-encontrado-icone">⚠️</div>
@@ -480,21 +412,12 @@
       return;
     }
 
-    const primeiro    = linhas[0];
-    const nomePreso   = primeiro.NOME_PRESO   || '—';
-    const pavilhao    = primeiro.PAVILHAO     || '—';
-    const cela        = primeiro.CELA         || '—';
-    const dataAtual   = primeiro.DATA_ATUALIZACAO || '';
-    const matExibir   = matriculaDigitada.toUpperCase();
-
-    // Somente visitantes com APTA = SIM
-    const visitantes  = linhas.filter(r => (r.APTA || '').toUpperCase() === 'SIM');
-
+    const visitantes = dados.visitantes || [];
     const listaHTML = visitantes.length > 0
       ? visitantes.map(v => `
           <div class="visitante-item">
-            <span class="visitante-nome">${esc(v.NOME_VISITANTE || '—')}</span>
-            <span class="visitante-relacao">${esc(v.RELACAO || '')}</span>
+            <span class="visitante-nome">${esc(v.nome || '—')}</span>
+            <span class="visitante-relacao">${esc(v.relacao || '')}</span>
           </div>`).join('')
       : `<div class="sem-visitas">Nenhum visitante autorizado no momento.</div>`;
 
@@ -502,17 +425,17 @@
       <div class="card">
         <div class="card-cabecalho">
           <div class="matricula-label">Matrícula</div>
-          <div class="nome-preso">${esc(matExibir)}</div>
-          <div class="matricula-valor">Nome: ${esc(nomePreso)}${dataAtual ? ' &nbsp;·&nbsp; Atualizado em ' + esc(dataAtual) : ''}</div>
+          <div class="nome-preso">${esc(matriculaDigitada)}</div>
+          <div class="matricula-valor">Nome: ${esc(dados.nome || '—')}${dados.dataAtualizacao ? ' &nbsp;·&nbsp; Atualizado em ' + esc(dados.dataAtualizacao) : ''}</div>
         </div>
         <div class="card-localizacao">
           <div class="loc-item">
             <span class="loc-label">Pavilhão</span>
-            <span class="loc-valor">${esc(pavilhao)}</span>
+            <span class="loc-valor">${esc(dados.pavilhao || '—')}</span>
           </div>
           <div class="loc-item">
             <span class="loc-label">Cela</span>
-            <span class="loc-valor">${esc(cela)}</span>
+            <span class="loc-valor">${esc(dados.cela || '—')}</span>
           </div>
         </div>
         <div class="visitantes-titulo">Visitantes autorizados (${visitantes.length})</div>
