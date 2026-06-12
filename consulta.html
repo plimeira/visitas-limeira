@@ -482,9 +482,9 @@
     div.innerHTML = `
       <div class="card">
         <div class="card-cabecalho">
-          <div class="matricula-label">Matrícula</div>
-          <div class="nome-preso">${esc(matriculaDigitada)}</div>
-          <div class="matricula-valor">Nome: ${esc(dados.nome || '—')}${dados.dataAtualizacao ? ' &nbsp;·&nbsp; Atualizado em ' + esc(dados.dataAtualizacao) : ''}</div>
+          <div class="matricula-label">Indivíduo Privado de Liberdade</div>
+          <div class="nome-preso">${esc(dados.nome || '—')}</div>
+          <div class="matricula-valor">Matrícula: ${esc(matriculaDigitada)}${dados.dataAtualizacao ? ' &nbsp;·&nbsp; Atualizado em ' + esc(dados.dataAtualizacao) : ''}</div>
         </div>
         <div class="card-localizacao">
           <div class="loc-item">
