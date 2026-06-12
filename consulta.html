@@ -548,9 +548,11 @@
     btn.disabled = true;
 
     try {
-      const dados  = await carregarDados();
-      const linhas = buscarPorMatricula(dados, mat);
-      renderizarResultado(linhas, mat);
+      const resp = await fetch(`${WORKER_URL}?matricula=${mat}`);
+      if (!resp.ok) throw new Error('Erro HTTP ' + resp.status);
+      const dados = await resp.json();
+      if (dados.erro) throw new Error(dados.erro);
+      renderizarResultado(dados, mat);
     } catch (err) {
       resultado.innerHTML = `<div class="erro">⚠️ Não foi possível carregar os dados. Tente novamente em instantes.<br><small>${esc(err.message)}</small></div>`;
     } finally {
